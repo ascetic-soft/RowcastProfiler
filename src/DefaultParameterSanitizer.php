@@ -12,10 +12,10 @@ final class DefaultParameterSanitizer implements ParameterSanitizerInterface
      * @param list<string> $extraSensitiveKeySubstrings case-insensitive substrings for array keys / named params
      */
     public function __construct(
-        private int $maxStringLength = 500,
-        private int $maxArrayItems = 20,
-        private int $maxNestingDepth = 3,
-        private array $extraSensitiveKeySubstrings = [],
+        private readonly int   $maxStringLength = 500,
+        private readonly int   $maxArrayItems = 20,
+        private readonly int   $maxNestingDepth = 3,
+        private readonly array $extraSensitiveKeySubstrings = [],
     ) {
     }
 
@@ -49,7 +49,7 @@ final class DefaultParameterSanitizer implements ParameterSanitizerInterface
         }
 
         if (\is_string($value)) {
-            $len = strlen($value);
+            $len = \strlen($value);
 
             if ($len > $this->maxStringLength) {
                 return substr($value, 0, $this->maxStringLength) . '…[' . $len . ' chars]';
@@ -63,7 +63,7 @@ final class DefaultParameterSanitizer implements ParameterSanitizerInterface
         }
 
         if (\is_array($value)) {
-            $items = array_slice($value, 0, $this->maxArrayItems, true);
+            $items = \array_slice($value, 0, $this->maxArrayItems, true);
             $result = [];
 
             foreach ($items as $k => $v) {
@@ -89,12 +89,7 @@ final class DefaultParameterSanitizer implements ParameterSanitizerInterface
             $this->extraSensitiveKeySubstrings,
         );
 
-        foreach ($needles as $needle) {
-            if ($needle !== '' && str_contains($lower, strtolower($needle))) {
-                return true;
-            }
-        }
+        return array_any($needles, fn ($needle) => $needle !== '' && str_contains($lower, strtolower($needle)));
 
-        return false;
     }
 }

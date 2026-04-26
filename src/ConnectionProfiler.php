@@ -4,37 +4,34 @@ declare(strict_types=1);
 
 namespace AsceticSoft\RowcastProfiler;
 
-use AsceticSoft\Rowcast\Connection;
 use AsceticSoft\Rowcast\ConnectionInterface;
 use AsceticSoft\Rowcast\QueryBuilder\QueryBuilder;
-use AsceticSoft\Rowcast\TypeConverter\TypeConverterRegistry;
+use AsceticSoft\Rowcast\TypeConverter\TypeConverterInterface;
 
 /**
  * Decorates {@see ConnectionInterface} to record SQL metrics via {@see ProfilerInterface}.
  */
-final class ConnectionProfiler implements ConnectionInterface
+final readonly class ConnectionProfiler implements ConnectionInterface
 {
     public function __construct(
-        private readonly ConnectionInterface $inner,
-        private readonly ProfilerInterface $profiler,
+        private ConnectionInterface $inner,
+        private ProfilerInterface $profiler,
     ) {
+    }
+
+    public function getTypeConverter(): TypeConverterInterface
+    {
+        return $this->inner->getTypeConverter();
+    }
+
+    public function setTypeConverter(TypeConverterInterface $typeConverter): void
+    {
+        $this->inner->setTypeConverter($typeConverter);
     }
 
     public function createQueryBuilder(): QueryBuilder
     {
-        $inner = $this->inner;
-
-        if ($inner instanceof Connection) {
-            $ref = new \ReflectionClass(Connection::class);
-            $prop = $ref->getProperty('typeConverter');
-            $prop->setAccessible(true);
-            /** @var \AsceticSoft\Rowcast\TypeConverter\TypeConverterInterface $typeConverter */
-            $typeConverter = $prop->getValue($inner);
-
-            return new QueryBuilder($this, $typeConverter);
-        }
-
-        return new QueryBuilder($this, TypeConverterRegistry::defaults());
+        return new QueryBuilder($this, $this->inner->getTypeConverter());
     }
 
     public function executeQuery(string $sql, array $params = []): \PDOStatement
@@ -47,7 +44,7 @@ final class ConnectionProfiler implements ConnectionInterface
 
             return $stmt;
         } catch (\Throwable $e) {
-            $this->profiler->finish($h, $e, null);
+            $this->profiler->finish($h, $e);
 
             throw $e;
         }
@@ -63,7 +60,7 @@ final class ConnectionProfiler implements ConnectionInterface
 
             return $affected;
         } catch (\Throwable $e) {
-            $this->profiler->finish($h, $e, null);
+            $this->profiler->finish($h, $e);
 
             throw $e;
         }
@@ -79,7 +76,7 @@ final class ConnectionProfiler implements ConnectionInterface
 
             return $rows;
         } catch (\Throwable $e) {
-            $this->profiler->finish($h, $e, null);
+            $this->profiler->finish($h, $e);
 
             throw $e;
         }
@@ -95,7 +92,7 @@ final class ConnectionProfiler implements ConnectionInterface
 
             return $row;
         } catch (\Throwable $e) {
-            $this->profiler->finish($h, $e, null);
+            $this->profiler->finish($h, $e);
 
             throw $e;
         }
@@ -111,7 +108,7 @@ final class ConnectionProfiler implements ConnectionInterface
 
             return $one;
         } catch (\Throwable $e) {
-            $this->profiler->finish($h, $e, null);
+            $this->profiler->finish($h, $e);
 
             throw $e;
         }
@@ -160,7 +157,7 @@ final class ConnectionProfiler implements ConnectionInterface
         $profiler = $this->profiler;
         $h = $profiler->start('toIterable', $sql, $params);
 
-        return (function () use ($h, $inner, $sql, $params, $profiler): \Generator {
+        return (static function () use ($h, $inner, $sql, $params, $profiler): \Generator {
             $count = 0;
             $error = null;
 

@@ -93,7 +93,7 @@ final class ConnectionProfilerTest extends TestCase
     {
         [$conn, $store] = $this->createProfiled();
 
-        $conn->transactional(function ($c) {
+        $conn->transactional(function ($c): void {
             self::assertInstanceOf(ConnectionProfiler::class, $c);
             $c->fetchOne('SELECT COUNT(*) FROM t');
         });

@@ -7,11 +7,11 @@ namespace AsceticSoft\RowcastProfiler;
 final class RowcastProfiler implements ProfilerInterface
 {
     public function __construct(
-        private QueryProfileStoreInterface $store,
-        private ParameterSanitizerInterface $sanitizer,
-        private SqlClassifier $classifier = new SqlClassifier(),
-        private float $slowQueryThresholdMs = 50.0,
-        private bool $collectParams = true,
+        private readonly QueryProfileStoreInterface  $store,
+        private readonly ParameterSanitizerInterface $sanitizer,
+        private readonly SqlClassifier               $classifier = new SqlClassifier(),
+        private float                                $slowQueryThresholdMs = 50.0,
+        private bool                                 $collectParams = true,
     ) {
     }
 
@@ -64,7 +64,7 @@ final class RowcastProfiler implements ProfilerInterface
             rowCount: $rowCount,
             slow: $durationMs >= $this->slowQueryThresholdMs,
             errorClass: $error !== null ? $error::class : null,
-            errorMessage: $error !== null ? $error->getMessage() : null,
+            errorMessage: $error?->getMessage(),
             context: $handle->context,
         );
 
@@ -94,9 +94,7 @@ final class RowcastProfiler implements ProfilerInterface
         }
 
         if ($result instanceof \PDOStatement) {
-            $n = $result->rowCount();
-
-            return $n >= 0 ? $n : null;
+            return $result->rowCount();
         }
 
         return null;
