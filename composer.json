@@ -1,0 +1,40 @@
+{
+    "name": "ascetic-soft/rowcast-profiler",
+    "description": "SQL query profiler for Rowcast via ConnectionInterface decoration",
+    "type": "library",
+    "version": "1.0.0",
+    "license": "MIT",
+    "keywords": [
+        "rowcast",
+        "profiler",
+        "pdo",
+        "sql",
+        "database"
+    ],
+    "authors": [
+        {
+            "name": "Andrey Borodulin",
+            "email": "borodulin@gmail.com"
+        }
+    ],
+    "require": {
+        "php": ">=8.4",
+        "ext-pdo": "*",
+        "ascetic-soft/rowcast": "^2.0"
+    },
+    "require-dev": {
+        "friendsofphp/php-cs-fixer": "^3.0",
+        "phpstan/phpstan": "^2.0",
+        "phpunit/phpunit": "^11.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "AsceticSoft\\RowcastProfiler\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "AsceticSoft\\RowcastProfiler\\Tests\\": "tests/"
+        }
+    }
+}
