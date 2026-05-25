@@ -1,0 +1,92 @@
+# Rowcast Profiler
+
+Rowcast Profiler is a lightweight PHP library for profiling SQL queries executed through Rowcast.
+It decorates `AsceticSoft\Rowcast\ConnectionInterface` and records query duration, sanitized parameters,
+row counts, errors, SQL type, normalized SQL, fingerprints, memory delta, and slow-query flags.
+
+## Package
+
+- Composer package: `ascetic-soft/rowcast-profiler`
+- PHP requirement: `>=8.4`
+- Runtime dependency: `ascetic-soft/rowcast`
+- License: MIT
+
+## Installation
+
+```bash
+composer require ascetic-soft/rowcast-profiler
+```
+
+## Main Classes
+
+- `AsceticSoft\RowcastProfiler\ConnectionProfiler`: Decorates a Rowcast connection and records profiler data for query methods.
+- `AsceticSoft\RowcastProfiler\RowcastProfiler`: Starts and finishes query profile records.
+- `AsceticSoft\RowcastProfiler\InMemoryQueryProfileStore`: Stores collected profiles in memory and exposes aggregate helpers.
+- `AsceticSoft\RowcastProfiler\DefaultParameterSanitizer`: Masks sensitive parameters and truncates long values.
+- `AsceticSoft\RowcastProfiler\SqlClassifier`: Classifies SQL statements and creates normalized SQL fingerprints.
+- `AsceticSoft\RowcastProfiler\QueryProfile`: Immutable profile data object for a single query operation.
+
+## Basic Usage
+
+```php
+use AsceticSoft\Rowcast\Connection;
+use AsceticSoft\RowcastProfiler\ConnectionProfiler;
+use AsceticSoft\RowcastProfiler\DefaultParameterSanitizer;
+use AsceticSoft\RowcastProfiler\InMemoryQueryProfileStore;
+use AsceticSoft\RowcastProfiler\RowcastProfiler;
+
+$inner = Connection::create('sqlite::memory:');
+$store = new InMemoryQueryProfileStore();
+$profiler = new RowcastProfiler($store, new DefaultParameterSanitizer());
+
+$connection = new ConnectionProfiler($inner, $profiler);
+$connection->fetchOne('SELECT 1');
+
+foreach ($store->getProfiles() as $profile) {
+    echo $profile->sql . ' ' . $profile->durationMs . "ms\n";
+}
+```
+
+## Profiled Operations
+
+`ConnectionProfiler` records profiles for:
+
+- `executeQuery()`
+- `executeStatement()`
+- `fetchAllAssociative()`
+- `fetchAssociative()`
+- `fetchOne()`
+- `toIterable()`
+
+The decorator delegates connection metadata, transactions, query-builder creation, PDO access, and Rowcast query listeners to the wrapped connection.
+
+## Query Profiles
+
+Each `QueryProfile` includes:
+
+- `operation`
+- `sql`
+- `sqlNormalized`
+- `fingerprint`
+- `statementType`
+- `paramsSanitized`
+- `durationMs`
+- `memoryDeltaBytes`
+- `rowCount`
+- `slow`
+- `errorClass`
+- `errorMessage`
+- `context`
+
+## Development
+
+Useful local commands:
+
+```bash
+composer update
+vendor/bin/phpunit
+vendor/bin/phpstan analyse src tests
+vendor/bin/php-cs-fixer fix --dry-run --diff
+```
+
+The test suite uses in-memory SQLite and does not require external services.

@@ -34,6 +34,16 @@ final readonly class ConnectionProfiler implements ConnectionInterface
         return new QueryBuilder($this, $this->inner->getTypeConverter());
     }
 
+    public function onBeforeQuery(callable $listener): void
+    {
+        $this->inner->onBeforeQuery($listener);
+    }
+
+    public function onAfterQuery(callable $listener): void
+    {
+        $this->inner->onAfterQuery($listener);
+    }
+
     public function executeQuery(string $sql, array $params = []): \PDOStatement
     {
         $h = $this->profiler->start('executeQuery', $sql, $params);
