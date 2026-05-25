@@ -40,7 +40,7 @@ final class RowcastProfiler implements ProfilerInterface
 
     public function finish(QueryProfileHandle $handle, ?\Throwable $error = null, mixed $result = null): void
     {
-        $durationMs = (hrtime(true) - $handle->startHrNs) / 1_000_000.0;
+        $durationMs = $this->resolveDurationMs($handle, $result);
         $memNow = memory_get_usage(true);
         $memoryDelta = $memNow - $handle->startMemoryUsage;
 
@@ -69,6 +69,15 @@ final class RowcastProfiler implements ProfilerInterface
         );
 
         $this->store->record($profile);
+    }
+
+    private function resolveDurationMs(QueryProfileHandle $handle, mixed $result): float
+    {
+        if (\is_array($result) && (\is_int($result['durationMs'] ?? null) || \is_float($result['durationMs'] ?? null))) {
+            return (float) $result['durationMs'];
+        }
+
+        return (hrtime(true) - $handle->startHrNs) / 1_000_000.0;
     }
 
     private function resolveRowCount(mixed $result, ?\Throwable $error): ?int

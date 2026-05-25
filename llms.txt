@@ -1,7 +1,7 @@
 # Rowcast Profiler
 
 Rowcast Profiler is a lightweight PHP library for profiling SQL queries executed through Rowcast.
-It decorates `AsceticSoft\Rowcast\ConnectionInterface` and records query duration, sanitized parameters,
+It subscribes to `AsceticSoft\Rowcast\ConnectionInterface` query events and records query duration, sanitized parameters,
 row counts, errors, SQL type, normalized SQL, fingerprints, memory delta, and slow-query flags.
 
 ## Package
@@ -19,7 +19,7 @@ composer require ascetic-soft/rowcast-profiler
 
 ## Main Classes
 
-- `AsceticSoft\RowcastProfiler\ConnectionProfiler`: Decorates a Rowcast connection and records profiler data for query methods.
+- `AsceticSoft\RowcastProfiler\ConnectionProfiler`: Subscribes to Rowcast connection query events and records profiler data.
 - `AsceticSoft\RowcastProfiler\RowcastProfiler`: Starts and finishes query profile records.
 - `AsceticSoft\RowcastProfiler\InMemoryQueryProfileStore`: Stores collected profiles in memory and exposes aggregate helpers.
 - `AsceticSoft\RowcastProfiler\DefaultParameterSanitizer`: Masks sensitive parameters and truncates long values.
@@ -39,8 +39,8 @@ $inner = Connection::create('sqlite::memory:');
 $store = new InMemoryQueryProfileStore();
 $profiler = new RowcastProfiler($store, new DefaultParameterSanitizer());
 
-$connection = new ConnectionProfiler($inner, $profiler);
-$connection->fetchOne('SELECT 1');
+new ConnectionProfiler($inner, $profiler);
+$inner->fetchOne('SELECT 1');
 
 foreach ($store->getProfiles() as $profile) {
     echo $profile->sql . ' ' . $profile->durationMs . "ms\n";
@@ -49,7 +49,7 @@ foreach ($store->getProfiles() as $profile) {
 
 ## Profiled Operations
 
-`ConnectionProfiler` records profiles for:
+`ConnectionProfiler` records Rowcast query events triggered by:
 
 - `executeQuery()`
 - `executeStatement()`
@@ -58,7 +58,7 @@ foreach ($store->getProfiles() as $profile) {
 - `fetchOne()`
 - `toIterable()`
 
-The decorator delegates connection metadata, transactions, query-builder creation, PDO access, and Rowcast query listeners to the wrapped connection.
+Profiles are recorded with operation `query`. Rowcast query events are emitted around SQL execution, so profile row counts are not available after result fetching and are usually `null`.
 
 ## Query Profiles
 

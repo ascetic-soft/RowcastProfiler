@@ -8,6 +8,7 @@ use AsceticSoft\Rowcast\Connection;
 use AsceticSoft\RowcastProfiler\ConnectionProfiler;
 use AsceticSoft\RowcastProfiler\DefaultParameterSanitizer;
 use AsceticSoft\RowcastProfiler\InMemoryQueryProfileStore;
+use AsceticSoft\RowcastProfiler\QueryProfile;
 use AsceticSoft\RowcastProfiler\RowcastProfiler;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
@@ -15,18 +16,31 @@ use PHPUnit\Framework\TestCase;
 #[CoversClass(ConnectionProfiler::class)]
 final class ConnectionProfilerTest extends TestCase
 {
+    /**
+     * @return array{Connection, InMemoryQueryProfileStore}
+     */
     private function createProfiled(): array
     {
-        $inner = Connection::create('sqlite::memory:');
+        $conn = Connection::create('sqlite::memory:');
         $store = new InMemoryQueryProfileStore();
         $profiler = new RowcastProfiler($store, new DefaultParameterSanitizer());
-        $conn = new ConnectionProfiler($inner, $profiler);
+        new ConnectionProfiler($conn, $profiler);
 
         $conn->executeStatement('CREATE TABLE t (id INTEGER PRIMARY KEY, name TEXT)');
         $conn->executeStatement('INSERT INTO t (name) VALUES (?)', ['a']);
         $conn->executeStatement('INSERT INTO t (name) VALUES (?)', ['b']);
 
         return [$conn, $store];
+    }
+
+    /**
+     * @param list<QueryProfile> $profiles
+     */
+    private function lastProfile(array $profiles): QueryProfile
+    {
+        self::assertNotEmpty($profiles);
+
+        return $profiles[\count($profiles) - 1];
     }
 
     public function test_fetch_one_is_profiled(): void
@@ -37,9 +51,9 @@ final class ConnectionProfilerTest extends TestCase
         self::assertSame('a', $one);
         $profiles = $store->getProfiles();
         self::assertCount(4, $profiles);
-        $last = $profiles[array_key_last($profiles)];
-        self::assertSame('fetchOne', $last->operation);
-        self::assertSame(1, $last->rowCount);
+        $last = $this->lastProfile($profiles);
+        self::assertSame('query', $last->operation);
+        self::assertNull($last->rowCount);
     }
 
     public function test_execute_statement_error_is_profiled(): void
@@ -52,7 +66,7 @@ final class ConnectionProfilerTest extends TestCase
         } catch (\Throwable) {
         }
 
-        $last = $store->getProfiles()[array_key_last($store->getProfiles())];
+        $last = $this->lastProfile($store->getProfiles());
         self::assertNotNull($last->errorClass);
     }
 
@@ -66,12 +80,10 @@ final class ConnectionProfilerTest extends TestCase
         }
 
         self::assertSame(2, $n);
-        $iterProfiles = array_values(array_filter(
-            $store->getProfiles(),
-            static fn ($p) => $p->operation === 'toIterable',
-        ));
-        self::assertCount(1, $iterProfiles);
-        self::assertSame(2, $iterProfiles[0]->rowCount);
+        $profiles = $store->getProfiles();
+        $last = $this->lastProfile($profiles);
+        self::assertSame('query', $last->operation);
+        self::assertSame('SELECT id FROM t ORDER BY id', $last->sql);
     }
 
     public function test_to_iterable_finishes_on_early_break(): void
@@ -82,11 +94,10 @@ final class ConnectionProfilerTest extends TestCase
             break;
         }
 
-        $iterProfiles = array_values(array_filter(
-            $store->getProfiles(),
-            static fn ($p) => $p->operation === 'toIterable',
-        ));
-        self::assertSame(1, $iterProfiles[0]->rowCount);
+        $profiles = $store->getProfiles();
+        $last = $this->lastProfile($profiles);
+        self::assertSame('query', $last->operation);
+        self::assertNull($last->rowCount);
     }
 
     public function test_transactional_passes_decorator_to_callback(): void
@@ -94,13 +105,13 @@ final class ConnectionProfilerTest extends TestCase
         [$conn, $store] = $this->createProfiled();
 
         $conn->transactional(function ($c): void {
-            self::assertInstanceOf(ConnectionProfiler::class, $c);
+            self::assertInstanceOf(Connection::class, $c);
             $c->fetchOne('SELECT COUNT(*) FROM t');
         });
 
         $fetchProfiles = array_filter(
             $store->getProfiles(),
-            static fn ($p) => $p->operation === 'fetchOne',
+            static fn ($p) => $p->sql === 'SELECT COUNT(*) FROM t',
         );
         self::assertGreaterThanOrEqual(1, \count($fetchProfiles));
     }
@@ -115,7 +126,7 @@ final class ConnectionProfilerTest extends TestCase
 
         $execProfiles = array_filter(
             $store->getProfiles(),
-            static fn ($p) => $p->operation === 'executeQuery',
+            static fn ($p) => $p->sql === 'SELECT COUNT(*) FROM t',
         );
         self::assertNotEmpty($execProfiles);
     }

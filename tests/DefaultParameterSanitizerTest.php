@@ -18,6 +18,7 @@ final class DefaultParameterSanitizerTest extends TestCase
 
         self::assertSame('a@b', $out['email']);
         self::assertSame('***', $out['api_key']);
+        self::assertIsArray($out['nested']);
         self::assertSame('***', $out['nested']['password']);
     }
 
@@ -32,6 +33,7 @@ final class DefaultParameterSanitizerTest extends TestCase
         $s = new DefaultParameterSanitizer(maxStringLength: 5);
         $out = $s->sanitize(['s' => '123456789'], true);
 
-        self::assertStringContainsString('…', (string) $out['s']);
+        self::assertIsString($out['s']);
+        self::assertStringContainsString('…', $out['s']);
     }
 }

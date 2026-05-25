@@ -1,6 +1,6 @@
 # Rowcast Profiler
 
-Lightweight SQL profiler for [Rowcast](https://github.com/ABorodulin/rowcast): wraps `AsceticSoft\Rowcast\ConnectionInterface` to record timings, parameters (sanitized), errors, and simple aggregates.
+Lightweight SQL profiler for [Rowcast](https://github.com/ascetic-soft/Rowcast): subscribes to `AsceticSoft\Rowcast\ConnectionInterface` query events to record timings, parameters (sanitized), errors, and simple aggregates.
 
 ## Install
 
@@ -22,8 +22,8 @@ $store = new InMemoryQueryProfileStore();
 $sanitizer = new DefaultParameterSanitizer();
 $profiler = new RowcastProfiler($store, $sanitizer, slowQueryThresholdMs: 50.0, maxQueries: 500);
 
-$connection = new ConnectionProfiler($inner, $profiler);
-$connection->fetchOne('SELECT 1');
+new ConnectionProfiler($inner, $profiler);
+$inner->fetchOne('SELECT 1');
 
 foreach ($store->getProfiles() as $profile) {
     echo $profile->sql, ' ', $profile->durationMs, "ms\n";
