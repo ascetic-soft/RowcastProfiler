@@ -2,7 +2,6 @@
     "name": "ascetic-soft/rowcast-profiler",
     "description": "SQL query profiler for Rowcast via ConnectionInterface decoration",
     "type": "library",
-    "version": "1.0.0",
     "license": "MIT",
     "keywords": [
         "rowcast",
